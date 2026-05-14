@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>NOTI — 重奪你的注意力</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --green: #00ff41;
+      --green-dim: #00c832;
+      --green-dark: #003d10;
+      --amber: #ffb300;
+      --red: #ff3b3b;
+      --white: #e8e8e8;
+      --grey: #888;
+      --bg: #000;
+      --bg-card: #0a0a0a;
+      --border: #1a1a1a;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--white);
+      font-family: 'JetBrains Mono', 'Courier New', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #000; }
+    ::-webkit-scrollbar-thumb { background: var(--green-dark); }
+
+    /* ── Scanlines overlay ── */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,.06) 2px,
+        rgba(0,0,0,.06) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ── Layout ── */
+    .container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+
+    section { padding: 80px 0; border-bottom: 1px solid var(--border); }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      background: rgba(0,0,0,.92);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid var(--green-dark);
+      z-index: 100;
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .nav-logo {
+      color: var(--green);
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: 2px;
+      text-decoration: none;
+    }
+
+    .nav-links { display: flex; gap: 24px; margin-left: auto; }
+    .nav-links a {
+      color: var(--grey);
+      text-decoration: none;
+      font-size: 12px;
+      letter-spacing: 1px;
+      transition: color .2s;
+    }
+    .nav-links a:hover { color: var(--green); }
+
+    /* ── Hero ── */
+    #hero {
+      padding-top: 140px;
+      padding-bottom: 80px;
+      border-bottom: 1px solid var(--border);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+    }
+
+    .hero-inner {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 60px;
+      align-items: center;
+    }
+
+    .prompt-line {
+      color: var(--green);
+      font-size: 11px;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+    }
+
+    .prompt-line::before { content: '> '; }
+
+    h1 {
+      font-size: clamp(36px, 5vw, 56px);
+      font-weight: 700;
+      line-height: 1.1;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+
+    h1 span { color: var(--green); }
+
+    .tagline {
+      color: var(--grey);
+      font-size: 13px;
+      margin-bottom: 32px;
+      line-height: 1.8;
+      max-width: 480px;
+    }
+
+    .cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    .btn {
+      display: inline-block;
+      padding: 10px 20px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-decoration: none;
+      cursor: pointer;
+      transition: all .2s;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--green);
+      color: #000;
+    }
+    .btn-primary:hover { background: var(--green-dim); }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--green);
+      border: 1px solid var(--green);
+    }
+    .btn-outline:hover { background: var(--green-dark); }
+
+    /* ── Phone Mockup ── */
+    .phone-wrap {
+      display: flex;
+      justify-content: center;
+    }
+
+    .phone {
+      width: 220px;
+      height: 440px;
+      border: 2px solid var(--green);
+      border-radius: 20px;
+      background: #000;
+      padding: 12px;
+      position: relative;
+      box-shadow: 0 0 40px rgba(0,255,65,.12), inset 0 0 20px rgba(0,255,65,.04);
+    }
+
+    .phone::before {
+      content: '';
+      position: absolute;
+      top: -2px; left: 50%;
+      transform: translateX(-50%);
+      width: 60px; height: 4px;
+      background: var(--green);
+      border-radius: 0 0 4px 4px;
+    }
+
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-size: 9px;
+      line-height: 1.5;
+      color: var(--green);
+    }
+
+    .phone-header {
+      border-bottom: 1px solid var(--green-dark);
+      padding-bottom: 6px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .phone-title { font-weight: 700; font-size: 10px; }
+    .phone-time { color: var(--grey); font-size: 8px; }
+
+    .noti-item {
+      border: 1px solid var(--green-dark);
+      padding: 5px;
+      margin-bottom: 5px;
+      position: relative;
+    }
+
+    .noti-tag {
+      display: inline-block;
+      padding: 1px 4px;
+      font-size: 7px;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .tag-urgent { background: var(--red); color: #000; }
+    .tag-reply { background: var(--amber); color: #000; }
+    .tag-info { background: var(--green-dark); color: var(--green); }
+    .tag-skip { background: #1a1a1a; color: var(--grey); }
+
+    .noti-app { color: var(--grey); font-size: 7px; }
+    .noti-text { color: var(--white); font-size: 8px; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .phone-cursor {
+      display: inline-block;
+      width: 6px;
+      height: 10px;
+      background: var(--green);
+      animation: blink 1s step-end infinite;
+      vertical-align: middle;
+    }
+
+    /* ── Section titles ── */
+    .section-label {
+      color: var(--green);
+      font-size: 10px;
+      letter-spacing: 3px;
+      margin-bottom: 8px;
+    }
+    .section-label::before { content: '// '; }
+
+    h2 {
+      font-size: clamp(22px, 3vw, 32px);
+      font-weight: 700;
+      color: var(--white);
+      margin-bottom: 16px;
+    }
+
+    h2 span { color: var(--green); }
+
+    .section-desc {
+      color: var(--grey);
+      max-width: 560px;
+      margin-bottom: 48px;
+      font-size: 13px;
+      line-height: 1.8;
+    }
+
+    /* ── Problem ── */
+    .problem-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+
+    .problem-item {
+      background: var(--bg-card);
+      padding: 24px;
+    }
+
+    .problem-num {
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--green);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .problem-label { color: var(--grey); font-size: 11px; }
+
+    /* ── Features ── */
+    .feature-list { display: flex; flex-direction: column; gap: 1px; background: var(--border); border: 1px solid var(--border); }
+
+    .feature-row {
+      display: grid;
+      grid-template-columns: 160px 1fr;
+      background: var(--bg-card);
+    }
+
+    .feature-key {
+      padding: 20px 20px 20px 24px;
+      color: var(--green);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      border-right: 1px solid var(--border);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }
+
+    .feature-key::before { content: '→ '; color: var(--green-dim); }
+
+    .feature-val {
+      padding: 20px 24px;
+      font-size: 12px;
+      line-height: 1.7;
+      color: var(--white);
+    }
+
+    .feature-val small { color: var(--grey); display: block; margin-top: 4px; font-size: 11px; }
+
+    /* ── Terminal Block ── */
+    .terminal-block {
+      background: var(--bg-card);
+      border: 1px solid var(--green-dark);
+      padding: 24px;
+      position: relative;
+    }
+
+    .terminal-block::before {
+      content: 'NOTI v0.1 — briefing.sh';
+      position: absolute;
+      top: -1px; left: 16px;
+      background: var(--bg-card);
+      padding: 0 8px;
+      font-size: 10px;
+      color: var(--green);
+      transform: translateY(-50%);
+    }
+
+    .terminal-block pre {
+      color: var(--green);
+      font-size: 12px;
+      line-height: 1.8;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .t-cmd { color: var(--white); }
+    .t-comment { color: var(--grey); }
+    .t-urgent { color: var(--red); }
+    .t-reply { color: var(--amber); }
+    .t-info { color: var(--green); }
+    .t-dim { color: #444; }
+
+    /* ── Architecture ── */
+    .arch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+
+    .arch-item {
+      background: var(--bg-card);
+      padding: 24px 20px;
+    }
+
+    .arch-layer {
+      font-size: 9px;
+      color: var(--grey);
+      letter-spacing: 2px;
+      margin-bottom: 8px;
+    }
+
+    .arch-name {
+      font-size: 13px;
+      color: var(--green);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .arch-desc { font-size: 11px; color: var(--grey); line-height: 1.6; }
+
+    .arch-arrow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      background: var(--bg);
+      color: var(--green-dark);
+      font-size: 18px;
+    }
+
+    /* ── Roadmap ── */
+    .roadmap { display: flex; flex-direction: column; gap: 1px; background: var(--border); border: 1px solid var(--border); }
+
+    .roadmap-item {
+      background: var(--bg-card);
+      display: grid;
+      grid-template-columns: 120px 1fr;
+    }
+
+    .roadmap-phase {
+      padding: 20px 24px;
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .phase-num {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--green);
+    }
+
+    .phase-status {
+      font-size: 9px;
+      letter-spacing: 1px;
+    }
+
+    .status-done { color: var(--green); }
+    .status-wip { color: var(--amber); }
+    .status-todo { color: var(--grey); }
+
+    .roadmap-content { padding: 20px 24px; }
+
+    .roadmap-title {
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--white);
+      margin-bottom: 8px;
+    }
+
+    .roadmap-items {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .roadmap-items li {
+      font-size: 11px;
+      color: var(--grey);
+    }
+
+    .roadmap-items li::before { content: '· '; color: var(--green-dark); }
+
+    /* ── Privacy bar ── */
+    .privacy-bar {
+      background: var(--green-dark);
+      border: 1px solid var(--green);
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 48px;
+    }
+
+    .privacy-icon { color: var(--green); font-size: 16px; }
+    .privacy-text { font-size: 12px; color: var(--green); }
+    .privacy-text strong { color: var(--white); }
+
+    /* ── Footer ── */
+    footer {
+      padding: 40px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-brand { color: var(--green); font-weight: 700; font-size: 14px; }
+    .footer-copy { color: var(--grey); font-size: 11px; }
+
+    .status-dot {
+      display: inline-block;
+      width: 6px; height: 6px;
+      background: var(--amber);
+      border-radius: 50%;
+      margin-right: 6px;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    /* ── Animations ── */
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: .5; transform: scale(.8); }
+    }
+
+    @keyframes typeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .fade-in {
+      animation: typeIn .4s ease both;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 700px) {
+      .hero-inner { grid-template-columns: 1fr; }
+      .phone-wrap { display: none; }
+      .feature-row { grid-template-columns: 1fr; }
+      .feature-key { border-right: none; border-bottom: 1px solid var(--border); }
+      .roadmap-item { grid-template-columns: 1fr; }
+      .roadmap-phase { border-right: none; border-bottom: 1px solid var(--border); flex-direction: row; align-items: center; gap: 16px; }
+      .footer-inner { flex-direction: column; align-items: flex-start; }
+    }
+
+    /* ── Glitch effect ── */
+    .glitch {
+      position: relative;
+    }
+    .glitch::after {
+      content: attr(data-text);
+      position: absolute;
+      top: 0; left: 2px;
+      color: var(--red);
+      clip-path: polygon(0 30%, 100% 30%, 100% 50%, 0 50%);
+      animation: glitch 4s infinite;
+      opacity: .6;
+    }
+
+    @keyframes glitch {
+      0%, 90%, 100% { transform: translateX(0); opacity: 0; }
+      92% { transform: translateX(-2px); opacity: .6; }
+      94% { transform: translateX(2px); opacity: .6; }
+      96% { transform: translateX(0); opacity: 0; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Nav -->
+  <nav>
+    <a href="#" class="nav-logo">NOTI</a>
+    <div class="nav-links">
+      <a href="#problem">問題</a>
+      <a href="#features">功能</a>
+      <a href="#briefing">簡報</a>
+      <a href="#arch">架構</a>
+      <a href="#roadmap">進度</a>
+    </div>
+  </nav>
+
+  <!-- Hero -->
+  <section id="hero">
+    <div class="container">
+      <div class="hero-inner">
+        <div>
+          <div class="prompt-line">ANDROID NOTIFICATION MANAGER v0.1</div>
+          <h1><span class="glitch" data-text="NOTI">NOTI</span><br>重奪你的<br>注意力</h1>
+          <p class="tagline">
+            你的手機螢幕是你最珍貴的資源。<br>
+            Gmail、LINE、DC、IG——它們每一個都想要你現在、立刻、馬上看它。<br>
+            NOTI 把所有通知整合成一條由 AI 主導的清醒資訊流。
+          </p>
+          <div class="cta-row">
+            <a href="#features" class="btn btn-primary">查看功能</a>
+            <a href="#roadmap" class="btn btn-outline">開發進度</a>
+          </div>
+        </div>
+
+        <!-- Phone mockup -->
+        <div class="phone-wrap">
+          <div class="phone">
+            <div class="phone-screen">
+              <div class="phone-header">
+                <span class="phone-title">NOTI</span>
+                <span class="phone-time">08:47</span>
+              </div>
+
+              <div class="noti-item">
+                <span class="noti-tag tag-urgent">URGENT</span>
+                <div class="noti-app">Gmail · 蔡老師</div>
+                <div class="noti-text">明天期中考範圍公告...</div>
+              </div>
+
+              <div class="noti-item">
+                <span class="noti-tag tag-reply">REPLY</span>
+                <div class="noti-app">LINE · 周佑康</div>
+                <div class="noti-text">明天的活動你來嗎？</div>
+              </div>
+
+              <div class="noti-item">
+                <span class="noti-tag tag-reply">REPLY</span>
+                <div class="noti-app">Discord · 電研社</div>
+                <div class="noti-text">企劃書改好了嗎...</div>
+              </div>
+
+              <div class="noti-item">
+                <span class="noti-tag tag-info">INFO</span>
+                <div class="noti-app">Classroom · 國文</div>
+                <div class="noti-text">第三課講義已上傳</div>
+              </div>
+
+              <div class="noti-item">
+                <span class="noti-tag tag-skip">SKIP</span>
+                <div class="noti-app">Instagram</div>
+                <div class="noti-text">有人對你的限時動態按讚</div>
+              </div>
+
+              <div class="noti-item">
+                <span class="noti-tag tag-skip">SKIP</span>
+                <div class="noti-app">Facebook</div>
+                <div class="noti-text">你可能認識的朋友...</div>
+              </div>
+
+              <div style="margin-top: 8px; color: #444; font-size: 8px;">
+                > waiting for input<span class="phone-cursor"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Problem -->
+  <section id="problem">
+    <div class="container">
+      <div class="section-label">PROBLEM STATEMENT</div>
+      <h2>人類注意力<span>正在被切碎</span></h2>
+      <p class="section-desc">
+        Jobs 設計 iPhone 時，沒有預料到通知系統會變成這樣。
+        每個 app 都有合理的理由通知你，但加在一起卻成了破壞專注力的機器。
+      </p>
+      <div class="problem-grid">
+        <div class="problem-item">
+          <div class="problem-num">96<span style="font-size:16px; color:var(--grey)">次</span></div>
+          <div class="problem-label">平均每天解鎖手機次數</div>
+        </div>
+        <div class="problem-item">
+          <div class="problem-num">23<span style="font-size:16px; color:var(--grey)">分</span></div>
+          <div class="problem-label">每次分心後要重新專注需要的時間</div>
+        </div>
+        <div class="problem-item">
+          <div class="problem-num">63<span style="font-size:16px; color:var(--grey)">%</span></div>
+          <div class="problem-label">通知被打開後在 5 秒內關掉</div>
+        </div>
+        <div class="problem-item">
+          <div class="problem-num">8<span style="font-size:16px; color:var(--grey)">+</span></div>
+          <div class="problem-label">每人平均安裝的通知型 app 數量</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features">
+    <div class="container">
+      <div class="section-label">FEATURE SPEC</div>
+      <h2>每個功能<span>只做必要的事</span></h2>
+      <p class="section-desc">
+        不是功能越多越好。每個模組都有且只有一個核心任務。
+      </p>
+      <div class="feature-list">
+        <div class="feature-row">
+          <div class="feature-key">通知攔截</div>
+          <div class="feature-val">
+            使用 Android <code>NotificationListenerService</code>，在系統層面讀取所有通知，不需要各別 app 授權。
+            <small>所有資料僅存本機。不上傳任何通知內容到雲端。</small>
+          </div>
+        </div>
+        <div class="feature-row">
+          <div class="feature-key">AI 分類</div>
+          <div class="feature-val">
+            每則通知自動標記為 <code style="color:var(--red)">URGENT</code> / <code style="color:var(--amber)">REPLY</code> / <code style="color:var(--green)">INFO</code> / <code style="color:var(--grey)">SKIP</code>。
+            <small>分類邏輯可手動覆寫，系統會從你的修正中學習規則。</small>
+          </div>
+        </div>
+        <div class="feature-row">
+          <div class="feature-key">安靜時段</div>
+          <div class="feature-val">
+            設定哪個時段哪個分類的通知才會真正震動。其他時段累積，統一在你指定的時間以摘要推送。
+            <small>例如：上課時間只允許 URGENT 通過。</small>
+          </div>
+        </div>
+        <div class="feature-row">
+          <div class="feature-key">行程提取</div>
+          <div class="feature-val">
+            AI 從通知內容中識別時間、地點、任務，一鍵寫入 Google Calendar。
+            <small>「明天下午三點在圖書館集合」→ 自動建立行程事件。</small>
+          </div>
+        </div>
+        <div class="feature-row">
+          <div class="feature-key">早晨簡報</div>
+          <div class="feature-val">
+            每天早上固定時間推送今日與明日的行程摘要，以及昨晚累積的待回覆訊息清單。
+            <small>格式極簡，30 秒讀完，掌握全局。</small>
+          </div>
+        </div>
+        <div class="feature-row">
+          <div class="feature-key">打包清單</div>
+          <div class="feature-val">
+            根據明天的行事曆推論你需要帶的東西，早晨通知一張小表格。
+            <small>有體育課 → 帶運動服。有考試 → 帶計算機。有社團 → 帶企劃書。</small>
+          </div>
+        </div>
+        <div class="feature-row">
+          <div class="feature-key">目標分解</div>
+          <div class="feature-val">
+            輸入一個長期目標，AI 拆解成每週子任務並分散寫入 Calendar，讓目標不再只是口號。
+            <small>「一個月後的期末考拿 90 分」→ 每天的複習計畫。</small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Briefing preview -->
+  <section id="briefing">
+    <div class="container">
+      <div class="section-label">DAILY BRIEFING FORMAT</div>
+      <h2>每天早晨的<span>指令輸出</span></h2>
+      <p class="section-desc">
+        不是卡片、不是圖表、不是漂亮的動畫。就是資訊本身。
+      </p>
+      <div class="terminal-block">
+        <pre>
+<span class="t-comment">─────────────────────────────────────────────────────</span>
+<span class="t-cmd">NOTI DAILY BRIEFING</span>   <span class="t-comment">2026-05-15 (五)  07:00</span>
+<span class="t-comment">─────────────────────────────────────────────────────</span>
+
+<span class="t-cmd">TODAY</span>
+  <span class="t-comment">08:10</span>  到校
+  <span class="t-comment">10:00</span>  <span class="t-urgent">[ 數學期中考 ]</span>  二年三班
+  <span class="t-comment">12:30</span>  午餐 / 自習
+  <span class="t-comment">15:00</span>  電研社   電腦教室 302
+
+<span class="t-cmd">TOMORROW</span>
+  <span class="t-comment">08:10</span>  到校
+  <span class="t-comment">09:00</span>  體育課  操場
+  <span class="t-comment">14:00</span>  英文小考
+
+<span class="t-comment">─────────────────────────────────────────────────────</span>
+
+<span class="t-cmd">REPLY NEEDED</span>  <span class="t-comment">(3 則)</span>
+  <span class="t-reply">LINE</span>    周佑康    <span class="t-comment">"明天的活動你來嗎？"</span>
+  <span class="t-reply">Discord</span> 電研社    <span class="t-comment">"企劃書改好了嗎..."</span>
+  <span class="t-reply">Gmail</span>   蔡老師    <span class="t-comment">"期中考範圍確認..."</span>
+
+<span class="t-comment">─────────────────────────────────────────────────────</span>
+
+<span class="t-cmd">PACK LIST</span>  <span class="t-comment">for 明天</span>
+  <span class="t-info">[ ]</span>  體育服 + 運動鞋   <span class="t-comment">← 體育課</span>
+  <span class="t-info">[ ]</span>  英文課本 + 筆記   <span class="t-comment">← 英文小考</span>
+  <span class="t-info">[ ]</span>  計算機             <span class="t-comment">← 以防萬一</span>
+  <span class="t-info">[ ]</span>  悠遊卡充值          <span class="t-comment">← 餘額 < 50</span>
+
+<span class="t-comment">─────────────────────────────────────────────────────</span>
+<span class="t-dim">END OF BRIEFING  ·  next: 2026-05-16 07:00</span>
+        </pre>
+      </div>
+
+      <div class="privacy-bar">
+        <span class="privacy-icon">⬛</span>
+        <span class="privacy-text">
+          <strong>隱私原則：</strong>所有通知內容僅在你的裝置上處理。
+          呼叫 AI API 時只傳送去識別化的摘要，不傳送原始訊息內文。
+        </span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Architecture -->
+  <section id="arch">
+    <div class="container">
+      <div class="section-label">SYSTEM ARCHITECTURE</div>
+      <h2>最底層的<span>設計原則</span></h2>
+      <p class="section-desc">
+        每一層只做一件事。資料盡量留在本地。AI 只在真正需要推理時才被呼叫。
+      </p>
+      <div class="arch-grid">
+        <div class="arch-item">
+          <div class="arch-layer">LAYER 0 — INTERCEPT</div>
+          <div class="arch-name">NotificationListener</div>
+          <div class="arch-desc">Android 系統服務，攔截所有通知，解析 app 來源、發送者、內容</div>
+        </div>
+        <div class="arch-item">
+          <div class="arch-layer">LAYER 1 — STORE</div>
+          <div class="arch-name">Room Database</div>
+          <div class="arch-desc">本地 SQLite，所有原始通知存在手機上，不上傳，支援離線操作</div>
+        </div>
+        <div class="arch-item">
+          <div class="arch-layer">LAYER 2 — THINK</div>
+          <div class="arch-name">Claude AI</div>
+          <div class="arch-desc">Haiku 做快速分類，Sonnet 做複雜推理（行程提取、打包清單）</div>
+        </div>
+        <div class="arch-item">
+          <div class="arch-layer">LAYER 3 — SYNC</div>
+          <div class="arch-name">Google Calendar</div>
+          <div class="arch-desc">雙向讀寫，提取行程事件，自動建立 AI 識別到的新事件</div>
+        </div>
+        <div class="arch-item">
+          <div class="arch-layer">LAYER 4 — SCHEDULE</div>
+          <div class="arch-name">WorkManager</div>
+          <div class="arch-desc">系統級排程，確保每日簡報在準確時間推送，即使 app 未開啟</div>
+        </div>
+        <div class="arch-item">
+          <div class="arch-layer">LAYER 5 — PRESENT</div>
+          <div class="arch-name">Compose UI</div>
+          <div class="arch-desc">Jetpack Compose + JetBrains Mono，終端機風格，零多餘裝飾</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Roadmap -->
+  <section id="roadmap">
+    <div class="container">
+      <div class="section-label">DEVELOPMENT ROADMAP</div>
+      <h2>分四個 Phase<span>逐步實作</span></h2>
+      <p class="section-desc">
+        先讓核心功能跑起來，再疊加智能層，最後加入進階功能。
+      </p>
+      <div class="roadmap">
+        <div class="roadmap-item">
+          <div class="roadmap-phase">
+            <span class="phase-num">P1</span>
+            <span class="phase-status status-wip">IN PROGRESS</span>
+          </div>
+          <div class="roadmap-content">
+            <div class="roadmap-title">通知攔截 + 本地儲存 + 基本 UI</div>
+            <ul class="roadmap-items">
+              <li>NotificationListenerService 設定與測試</li>
+              <li>Room Database schema 設計</li>
+              <li>終端機風格 Compose UI 主題</li>
+              <li>通知 Feed 畫面（主畫面）</li>
+            </ul>
+          </div>
+        </div>
+        <div class="roadmap-item">
+          <div class="roadmap-phase">
+            <span class="phase-num">P2</span>
+            <span class="phase-status status-todo">PLANNED</span>
+          </div>
+          <div class="roadmap-content">
+            <div class="roadmap-title">Claude AI 分類 + 安靜時段控制</div>
+            <ul class="roadmap-items">
+              <li>Anthropic SDK 整合（Haiku 模型）</li>
+              <li>通知分類 prompt 設計與測試</li>
+              <li>時段規則設定畫面</li>
+              <li>每 app / 每分類的通知行為控制</li>
+            </ul>
+          </div>
+        </div>
+        <div class="roadmap-item">
+          <div class="roadmap-phase">
+            <span class="phase-num">P3</span>
+            <span class="phase-status status-todo">PLANNED</span>
+          </div>
+          <div class="roadmap-content">
+            <div class="roadmap-title">Calendar 整合 + 每日早晨簡報</div>
+            <ul class="roadmap-items">
+              <li>Google Calendar API OAuth 設定</li>
+              <li>從通知提取行程事件</li>
+              <li>WorkManager 每日簡報排程</li>
+              <li>打包清單生成邏輯</li>
+            </ul>
+          </div>
+        </div>
+        <div class="roadmap-item">
+          <div class="roadmap-phase">
+            <span class="phase-num">P4</span>
+            <span class="phase-status status-todo">PLANNED</span>
+          </div>
+          <div class="roadmap-content">
+            <div class="roadmap-title">目標分解 + 長期任務規劃</div>
+            <ul class="roadmap-items">
+              <li>目標輸入介面設計</li>
+              <li>Sonnet 模型任務分解推理</li>
+              <li>自動寫入 Calendar 子任務</li>
+              <li>進度追蹤與提醒</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top: 32px; padding: 20px; border: 1px solid var(--border); background: var(--bg-card);">
+        <div style="font-size: 11px; color: var(--grey); margin-bottom: 12px; letter-spacing: 1px;">// TECH STACK</div>
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+          <span style="padding: 4px 10px; border: 1px solid var(--green-dark); color: var(--green); font-size: 11px;">Kotlin</span>
+          <span style="padding: 4px 10px; border: 1px solid var(--green-dark); color: var(--green); font-size: 11px;">Jetpack Compose</span>
+          <span style="padding: 4px 10px; border: 1px solid var(--green-dark); color: var(--green); font-size: 11px;">Room Database</span>
+          <span style="padding: 4px 10px; border: 1px solid var(--green-dark); color: var(--green); font-size: 11px;">WorkManager</span>
+          <span style="padding: 4px 10px; border: 1px solid var(--green-dark); color: var(--green); font-size: 11px;">Claude API</span>
+          <span style="padding: 4px 10px; border: 1px solid var(--green-dark); color: var(--green); font-size: 11px;">Google Calendar API</span>
+          <span style="padding: 4px 10px; border: 1px solid var(--border); color: var(--grey); font-size: 11px;">Android 10+</span>
+          <span style="padding: 4px 10px; border: 1px solid var(--border); color: var(--grey); font-size: 11px;">Min SDK 29</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container">
+      <div class="footer-inner">
+        <div>
+          <div class="footer-brand">NOTI</div>
+          <div class="footer-copy" style="margin-top: 4px;">Android Notification Manager · 設計概念稿</div>
+        </div>
+        <div class="footer-copy">
+          <span class="status-dot"></span>
+          <span style="color: var(--amber)">IN DEVELOPMENT</span>
+          &nbsp;·&nbsp; 文華電研 WHCSC
+        </div>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>
